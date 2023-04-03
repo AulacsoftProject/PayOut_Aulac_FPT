@@ -7,6 +7,8 @@
         public string? PntName { get; set; }
         public string? PntBirthday { get; set; }
         public string? SexName { get; set; }
+        public string? SoCMND { get; set; }
+        public string? InsNum { get; set; }
         public string? DateExam { get; set; }
         public string? AmtLineInExc { get; set; }
         public QRCodeInfo? QRCode { get; set; }
@@ -19,7 +21,10 @@
         public Guid? terminal_id { get; set; }
         public string? order_id { get; set; }
         public string? paintent_id { get; set; }
+        public string? cccd_id { get; set; }
+        public string? bhyt_id { get;set; }
         public string? ho_ten_bn { get; set; }
+        public string? ngay_sinh_bn { get; set; }
         public string? vch_id { get; set; }
         public string? payment_type { get; set; }
         public string? amount { get; set; }

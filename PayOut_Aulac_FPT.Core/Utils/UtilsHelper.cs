@@ -1,5 +1,4 @@
-﻿using Aulac.Global.Security;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+﻿using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -24,15 +23,15 @@ namespace PayOut_Aulac_FPT.Core.Utils
             return res.ToString();
         }
 
-        public static string HashPassword(string password)//, string salt
+        public static string HashPassword(string password, string salt)
         {
-            //string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-            //    password: password!,
-            //    salt: Encoding.Unicode.GetBytes(salt),
-            //    prf: KeyDerivationPrf.HMACSHA256,
-            //    iterationCount: 100000,
-            //    numBytesRequested: 256 / 8));
-            string hashed = SecureHelper.EncodeString(password);
+            string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+                password: password!,
+                salt: Encoding.Unicode.GetBytes(salt),
+                prf: KeyDerivationPrf.HMACSHA256,
+                iterationCount: 100000,
+                numBytesRequested: 256 / 8));
+            //string hashed = SecureHelper.EncodeString(password);
             return hashed;
         }
     }
