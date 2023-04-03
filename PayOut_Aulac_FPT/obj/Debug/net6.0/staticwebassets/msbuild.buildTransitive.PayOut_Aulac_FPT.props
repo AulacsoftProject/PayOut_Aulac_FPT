@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\buildMultiTargeting\PayOut_Aulac_FPT.props" />
+</Project>

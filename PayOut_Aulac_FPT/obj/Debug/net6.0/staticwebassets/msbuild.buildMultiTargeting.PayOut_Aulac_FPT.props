@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\PayOut_Aulac_FPT.props" />
+</Project>

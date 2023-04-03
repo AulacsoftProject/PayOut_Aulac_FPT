@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Entities\CauHinh.cs" />
+    <Compile Remove="Interfaces\Repositories\ICauHinhRepository.cs" />
+    <Compile Remove="Interfaces\Services\ICauHinhService.cs" />
+    <Compile Remove="Interfaces\Services\IMenuNguoiDungService.cs" />
+    <Compile Remove="Services\CauHinhService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Aulac.Global">
+      <HintPath>..\package\Aulac.Global.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

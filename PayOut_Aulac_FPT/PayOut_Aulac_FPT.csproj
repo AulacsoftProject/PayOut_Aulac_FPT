@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DTO\CauHinh\**" />
+    <Compile Remove="DTO\NguoiDung\**" />
+    <Compile Remove="DTO\QuyenNguoiDung\**" />
+    <Compile Remove="Enums\**" />
+    <Content Remove="DTO\CauHinh\**" />
+    <Content Remove="DTO\NguoiDung\**" />
+    <Content Remove="DTO\QuyenNguoiDung\**" />
+    <Content Remove="Enums\**" />
+    <EmbeddedResource Remove="DTO\CauHinh\**" />
+    <EmbeddedResource Remove="DTO\NguoiDung\**" />
+    <EmbeddedResource Remove="DTO\QuyenNguoiDung\**" />
+    <EmbeddedResource Remove="Enums\**" />
+    <None Remove="DTO\CauHinh\**" />
+    <None Remove="DTO\NguoiDung\**" />
+    <None Remove="DTO\QuyenNguoiDung\**" />
+    <None Remove="Enums\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\CauHinhController.cs" />
+    <Compile Remove="Controllers\MenuNguoiDungController.cs" />
+    <Compile Remove="Controllers\UpLoadController.cs" />
+    <Compile Remove="Controllers\UserLoginController.cs" />
+    <Compile Remove="DTO\HoaDon\HoaDonChiTietGroupDTO.cs" />
+    <Compile Remove="DTO\MatBang\MatBangPhatSinhThangGroupDTO.cs" />
+    <Compile Remove="Profiles\CauHinhProfile.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
+    <PackageReference Include="Dapper" Version="2.0.123" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PayOut_Aulac_FPT.Core\PayOut_Aulac_FPT.Core.csproj" />
+    <ProjectReference Include="..\PayOut_Aulac_FPT.Infrastructure\PayOut_Aulac_FPT.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Aulac.Global">
+      <HintPath>bin\Debug\net6.0\Aulac.Global.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

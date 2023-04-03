@@ -1,0 +1,22 @@
+﻿using PayOut_Aulac_FPT.Core.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace PayOut_Aulac_FPT.Core.Entities
+{
+    public class CompanyInfo:IEntity
+    {
+        public int? HspPrkID { get; set; }
+        public string? OfficeMngName { get; set; }
+        public string? HspName { get; set; }
+        public int? RankHsp { get; set; }
+        public string? InsPrvnCode { get; set; }
+        public string? InsOfficeCode { get; set; }
+        public int? TuyenKcb { get; set; }
+        public string? FolderData { get; set; }
+        public bool? IsSmallOffice { get; set; }
+    }
+}

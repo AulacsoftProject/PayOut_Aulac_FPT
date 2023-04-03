@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PayOut_Aulac_FPT</name>
+    </assembly>
+    <members>
+        <member name="M:PayOut_Aulac_FPT.Controllers.ConnectPaymentController.Info(PayOut_Aulac_FPT.DTO.ConnectPayment.QRCodeCreateRequest)">
+            <summary>
+            Khởi tạo QR code
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PayOut_Aulac_FPT.Controllers.ConnectPaymentController.Items(System.String)">
+            <summary>
+            Foxpay thực hiện kết nối với Portal-Listeins
+            </summary>
+            <param name="data"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PayOut_Aulac_FPT.Controllers.ConnectPaymentController.Items_OTP(System.String)">
+            <summary>
+            Foxpay gửi OTP cho Portal-Listeins
+            </summary>
+            <param name="data"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PayOut_Aulac_FPT.Controllers.ResultPaymentController.Items(System.String)">
+            <summary>
+            Api Foxpay trả kết quả thanh toán cho Portal-Listeins
+            </summary>
+            <param name="data"></param>
+            <returns></returns>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListPagedRequest`2.PageNumber">
+            <summary>
+            Trang
+            </summary>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListPagedRequest`2.PageSize">
+            <summary>
+            Số trường của 1 trang
+            </summary>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListPagedRequest`2.Sort">
+            <summary>
+            Sắp xếp theo
+            </summary>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListPagedRequest`2.Search">
+            <summary>
+            Tìm kiếm theo
+            </summary>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListRequest`2.Sort">
+            <summary>
+            Sắp xếp theo
+            </summary>
+        </member>
+        <member name="P:PayOut_Aulac_FPT.DTO.ListRequest`2.Search">
+            <summary>
+            Tìm kiếm theo
+            </summary>
+        </member>
+    </members>
+</doc>
