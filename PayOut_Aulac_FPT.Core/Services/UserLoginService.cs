@@ -29,7 +29,7 @@ namespace PayOut_Aulac_FPT.Core.Services
 
         public string HashPassword(string password)
         {
-            return UtilsHelper.HashPassword(password);//, _configuration["Password:Salt"]
+            return UtilsHelper.HashPassword(password, _configuration["Password:Salt"]);
         }
     }
 }

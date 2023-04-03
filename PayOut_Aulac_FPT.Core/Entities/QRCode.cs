@@ -18,7 +18,10 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? terminal_id { get; set; }
         public string? order_id { get; set; }
         public string? paintent_id { get; set; }
+        public string? cccd_id { get; set; }
+        public string? bhyt_id { get; set; }
         public string? ho_ten_bn { get; set; }
+        public string? ngay_sinh_bn { get; set; }
         public string? vch_id { get; set; }
         public string? payment_type { get; set; }
         public string? amount { get; set; }
@@ -39,5 +42,9 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? SexName { get; set; }
         [TableForeign("Task_JrnOutsideExamHeader", "DateExam")]
         public string? DateExam { get; set; }
+        //[TableForeign("MdcFile_PntExam", "SoCMND")]
+        public string? SoCMND { get; set; }
+        [TableForeign("MdcFile_PntRdcObj", "InsNum")]
+        public string? InsNum { get; set; }
     }
 }
