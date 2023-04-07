@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using PayOut_Aulac_FPT.Core.Entities;
 using PayOut_Aulac_FPT.Core.Exceptions;
 using PayOut_Aulac_FPT.Core.Interfaces.Services;
 using System;
@@ -13,7 +15,7 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
 {
     public class FoxpayServiceAPI : IFoxpayServiceAPI
     {
-        private static string? access_token;
+        private static Token? token;
         private string? domain;
         private string? username;
         private string? password;
@@ -32,8 +34,10 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
             deviceID = configuration["Foxpay:device-id"];
             ipAddress = configuration["Foxpay:ip-address"];
         }
-        private async Task<HttpResponseMessage> PostRequestAsync(string path, string encoded, string paramJson)
+        private async Task<HttpResponseMessage> PostRequestAsync(string path, string paramJson, MultipartFormDataContent dataRaw, bool isLogin = false)
         {
+            encoded = _base64Service.Base64Encode(username + ":" + password);
+
             using HttpClient httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(domain);
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
@@ -43,17 +47,27 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
             request.Headers.Add("ip-address", ipAddress);
             request.Headers.Add("Authorization", "Basic " + encoded);
 
-            var content = new MultipartFormDataContent();
-            content.Add(new StringContent("client_credentials"), "grant_type");
-            request.Content = content;
+            if (!isLogin)
+            {
+                if (token == null /*|| !token.IsValid()*/)
+                {
+                    await GetToken();
+                }
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token?.access_token);
+            }
+
+            if (paramJson == null)
+                request.Content = dataRaw;
+            else
+                request.Content = new StringContent(paramJson, null, "application/json");
 
             try
             {
                 HttpResponseMessage response = await httpClient.SendAsync(request);
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    access_token = null;
-                    return await PostRequestAsync(path, encoded, paramJson);
+                    token = null;
+                    return await PostRequestAsync(path, paramJson, dataRaw, true);
                 }
                 return response;
             }
@@ -63,18 +77,17 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
             }
         }
 
-        private async Task<HttpResponseMessage> PostRequestAsync(string path, Dictionary<string, string> dParam)
+        private async Task<HttpResponseMessage> PostRequestAsync(string path, StringContent dParam, string valueParam, bool isLogin = false)
         {
-            encoded = _base64Service.Base64Encode(username + ":" + password);
-            return await PostRequestAsync(path, encoded, JsonConvert.SerializeObject(dParam));
+            var content = new MultipartFormDataContent();
+            content.Add(dParam, valueParam);
+
+            return await PostRequestAsync(path, null, content, isLogin);
         }
 
         private async Task GetToken()
         {
-            var response = await PostRequestAsync("/oauth/get_token", new Dictionary<string, string>
-                {
-                    { "grant_type", "client_credentials"}
-            });
+            var response = await PostRequestAsync("/oauth/get_token", new StringContent("client_credentials"), "grant_type", true);
             if (response != null)
             {
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -89,7 +102,41 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
                 }
                 else
                 {
-                    access_token = data?.access_token;
+                    token = data;
+                }
+            }
+            else
+            {
+                throw new NotificationException("Có lỗi xảy ra, vui lòng thử lại!");
+            }
+        }
+
+        public async Task<ResultFoxpay?> CheckTransaction(PaymentFoxpay resultFoxpay)
+        {
+            var result = JsonConvert.SerializeObject(resultFoxpay);
+            var response = await PostRequestAsync("/api/hue-his/payment/check-transaction", result, null);
+            if (response != null)
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.BadRequest:
+                        throw new NotificationException("Dữ liệu không đúng cú pháp!");
+                    case HttpStatusCode.Unauthorized:
+                        throw new NotificationException("Chữ ký không hợp lệ!");
+                    case HttpStatusCode.InternalServerError:
+                        throw new NotificationException("Có lỗi xảy ra trong quá trình xử lý!");
+                    case HttpStatusCode.OK:
+                        var jsonString = await response.Content.ReadAsStringAsync();
+                        var data = JsonConvert.DeserializeObject<ResultFoxpay>(jsonString);
+                        //if (data?.result_code == "200")
+                        //{
+                            return data;
+                        //}
+                        //else
+                        //{
+                        //    throw new Exception(data?.message);
+                        //}
+                    default: throw new NotificationException("Không thể kiểm tra giao dịch, vui lòng thử lại!");
                 }
             }
             else

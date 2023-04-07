@@ -16,7 +16,7 @@ namespace PayOut_Aulac_FPT.Core.Interfaces.Services
         public IEnumerable<T> Gets(BaseSort? sort, BaseSearch? search);
         public IEnumerable<T> GetAll();
         public IEnumerable<T> GetPage(int pageNumber, int pageSize, BaseSort? sort, BaseSearch? search, out int totalRow);
-        public Guid? Create(T entity);
+        public string? Create(T entity);
         public bool Update(T entity);
         public bool Patch(T entity);
         public bool Delete(T entity);

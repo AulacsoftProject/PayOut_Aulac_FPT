@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PayOut_Aulac_FPT.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,5 +10,6 @@ namespace PayOut_Aulac_FPT.Core.Interfaces.Services
     public interface IFoxpayServiceAPI
     {
         //public Task<HttpResponseMessage?> PostRequestAsync(string path, string encodedBase64, string paramJson, bool isLogin = false, bool hasLogin = false);
+        public Task<ResultFoxpay?> CheckTransaction(PaymentFoxpay resultPayment);
     }
 }

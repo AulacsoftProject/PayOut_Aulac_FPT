@@ -15,8 +15,8 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? UserPaymentID { get; set; }
         public string? UserPaymentPassWord { get; set; }
         public string? UserPaymentName { get; set; }
-        public Guid? merchant_id { get; set; }
-        public Guid? terminal_id { get; set; }
+        public string? merchant_id { get; set; }
+        public string? terminal_id { get; set; }
         public string? secret_key { get; set; }
         public bool? IsActive { get; set; }
     }

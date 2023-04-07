@@ -21,7 +21,7 @@ namespace PayOut_Aulac_FPT.Core.Services
             _repo = repo;
         }
 
-        public virtual Guid? Create(T entity)
+        public virtual string? Create(T entity)
         {
             return _repo.Create(entity);
         }

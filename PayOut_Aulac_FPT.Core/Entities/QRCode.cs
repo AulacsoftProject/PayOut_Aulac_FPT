@@ -46,5 +46,9 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? SoCMND { get; set; }
         [TableForeign("MdcFile_PntRdcObj", "InsNum")]
         public string? InsNum { get; set; }
+        [TableForeign("VchPaymentFoxpay", "VchPmtFoxpayPrkID")]
+        public string? VchPmtFoxpayPrkID { get; set; }
+        [TableForeign("VchPaymentFoxpay", "StatusReq")]
+        public string? StatusReq { get; set; }
     }
 }

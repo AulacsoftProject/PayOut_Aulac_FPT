@@ -34,6 +34,8 @@ builder.Services.AddScoped<IQRCodeRepository, QRCodeRepository>();
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<ICompanyInfoRepository, CompanyInfoRepository>();
 builder.Services.AddScoped<ICompanyInfoService, CompanyInfoService>();
+builder.Services.AddScoped<IVchPaymentFoxpayRepository, VchPaymentFoxpayRepository>();
+builder.Services.AddScoped<IVchPaymentFoxpayService, VchPaymentFoxpayService>();
 //builder.Services.AddScoped<ICauHinhRepository, CauHinhRepository>();
 //builder.Services.AddScoped<ICauHinhService, CauHinhService>();
 
@@ -52,9 +54,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddOptions();
 
 builder.Services.AddTransient<IDbConnection>(db => new SqlConnection(
-                    builder.Configuration.GetConnectionString("46-187")));
+                    builder.Configuration.GetConnectionString("46187")));
 //builder.Services.AddTransient<IDbConnection>(db => new SqlConnection(
-                    //builder.Configuration.GetConnectionString("46-004")));
+                    //builder.Configuration.GetConnectionString("46004")));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
