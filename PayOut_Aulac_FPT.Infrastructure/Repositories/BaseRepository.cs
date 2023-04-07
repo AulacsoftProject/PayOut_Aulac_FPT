@@ -34,7 +34,7 @@ namespace PayOut_Aulac_FPT.Infrastructure.Repositories
             _nameTable = nameTable ?? typeof(T).Name;
         }
 
-        public virtual Guid? Create(T entity)
+        public virtual string? Create(T entity)
         {
             var param = DBQueryHelper.GetParamOnlyTable(entity, false);
             string? idName = DBQueryHelper.GetPrimaryKeyName<T>();
@@ -42,10 +42,10 @@ namespace PayOut_Aulac_FPT.Infrastructure.Repositories
             {
                 throw new ArgumentNullException(nameof(idName));
             }
-            param.Add(idName, dbType: DbType.Guid, direction: ParameterDirection.Output);
+            param.Add(idName, dbType: DbType.Decimal, direction: ParameterDirection.Output);
             _dbConnection.Query<T>(GetInsertString(), param, commandType: CommandType.StoredProcedure);
-            Guid? id = param.Get<Guid>(idName);
-            return id;
+            Decimal? id = param.Get<Decimal>(idName);
+            return id.ToString();
         }
 
         public virtual bool Update(T entity)

@@ -4,6 +4,8 @@
     {
         public string? MdcFilePrkID { get; set; }
         public string? VchPmntPrkID { get; set; }
+        public string? VchPmtFoxPayPrkID { get; set; }
+        public string? StatusReq { get; set; }
         public string? PntName { get; set; }
         public string? PntBirthday { get; set; }
         public string? SexName { get; set; }
@@ -17,8 +19,8 @@
     public class QRCodeInfo
     {
         public string? version { get; set; }
-        public Guid? merchant_id { get; set; }
-        public Guid? terminal_id { get; set; }
+        public string? merchant_id { get; set; }
+        public string? terminal_id { get; set; }
         public string? order_id { get; set; }
         public string? paintent_id { get; set; }
         public string? cccd_id { get; set; }

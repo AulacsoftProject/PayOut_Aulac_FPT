@@ -13,6 +13,8 @@ using Microsoft.Extensions.Configuration;
 using PayOut_Aulac_FPT.DTO.OTPPayment;
 using System.Security.Cryptography.Xml;
 using Newtonsoft.Json;
+using System.Runtime;
+using PayOut_Aulac_FPT.Core.Utils.Enums;
 
 namespace PayOut_Aulac_FPT.Controllers
 {
@@ -27,10 +29,11 @@ namespace PayOut_Aulac_FPT.Controllers
         private readonly ISha256HexService _sha256HexService;
         private readonly IUserLoginService _userLoginService;
         private readonly IFoxpayServiceAPI _fboxpayServiceAPI;
+        private readonly IVchPaymentFoxpayService _vchPaymentFoxpayService;
         private readonly ILogger<ConnectPaymentController> _logger;
         private readonly IMapper _mapper;
 
-        public ConnectPaymentController(ILogger<ConnectPaymentController> logger, ICompanyInfoService companyInfoService, IQRCodeService qRCodeService, IConfiguration configuration, IBase64Service base64Service, ISha256HexService sha256HexService, IUserLoginService userLoginService, IFoxpayServiceAPI foxpayServiceAPI, IMapper mapper)
+        public ConnectPaymentController(ILogger<ConnectPaymentController> logger, ICompanyInfoService companyInfoService, IQRCodeService qRCodeService, IConfiguration configuration, IBase64Service base64Service, ISha256HexService sha256HexService, IUserLoginService userLoginService, IFoxpayServiceAPI foxpayServiceAPI, IVchPaymentFoxpayService vchPaymentFoxpayService, IMapper mapper)
         {
             _logger = logger;
             _companyInfoService = companyInfoService;
@@ -40,6 +43,7 @@ namespace PayOut_Aulac_FPT.Controllers
             _sha256HexService = sha256HexService;
             _userLoginService = userLoginService;
             _fboxpayServiceAPI = foxpayServiceAPI;
+            _vchPaymentFoxpayService = vchPaymentFoxpayService;
             _mapper = mapper;
         }
 
@@ -55,7 +59,6 @@ namespace PayOut_Aulac_FPT.Controllers
             {
                 var versionFoxpay = _configuration["Foxpay:Version"];
                 var companyInfo = _companyInfoService.Get(new CompanyInfo());
-                string maCSKCB = companyInfo.InsPrvnCode + "-" + companyInfo.InsOfficeCode;
                 var loginInfo = _userLoginService.Get(new UserLogin
                 {
                     UserPaymentID = companyInfo.InsPrvnCode + companyInfo.InsOfficeCode,
@@ -70,7 +73,7 @@ namespace PayOut_Aulac_FPT.Controllers
 
                 var hoTen = _base64Service.Base64Encode(PntInfo.ho_ten_bn);
                 var contentPayment = _base64Service.Base64Encode(PntInfo.content_payment);
-                var mSignature = PntInfo.version + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + PntInfo.order_id + PntInfo.amount /*+ PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + PntInfo.order_id + PntInfo.transaction_payment + PntInfo.paintent_id /*+ PntInfo.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
 
                 var qrCode = new QRCodeInfo()
                 {
@@ -98,6 +101,24 @@ namespace PayOut_Aulac_FPT.Controllers
                     city_id = PntInfo.city_id,
                     terminal_name = PntInfo.terminal_name,
                 };
+
+                var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = PntInfo.VchPmtFoxpayPrkID, patient_id = PntInfo.MdcFilePrkID, vch_id = PntInfo.vch_id });
+
+                if (vchPaymentFoxpay.Count() == 0)
+                {
+                    var insert = _vchPaymentFoxpayService.Create(new VchPaymentFoxpay
+                    {
+                        patient_id = PntInfo.MdcFilePrkID,
+                        vch_id = PntInfo.vch_id,
+                        payment_type = PntInfo.payment_type,
+                        version = versionFoxpay,
+                        order_id = PntInfo.order_id,
+                        transaction_payment = PntInfo.transaction_payment.ToString(),
+                        amount = double.Parse(PntInfo.amount),
+                        StatusReq = (int)EStatusReq.ReqExam,
+                        signature = _sha256HexService.SHA256Hex(mSignature)
+                    });
+                }
 
                 return Ok(new SuccessResponse<QRCodeCreateResponse>(
                     new QRCodeCreateResponse()
@@ -135,6 +156,14 @@ namespace PayOut_Aulac_FPT.Controllers
                 var request = Newtonsoft.Json.JsonConvert.DeserializeObject<ConnectPaymentRequest>(data);
                 var txn = new txn();
 
+                var versionFoxpay = _configuration["Foxpay:Version"];
+                var companyInfo = _companyInfoService.Get(new CompanyInfo());
+                var loginInfo = _userLoginService.Get(new UserLogin
+                {
+                    UserPaymentID = companyInfo.InsPrvnCode + companyInfo.InsOfficeCode,
+                    IsActive = true
+                });
+
                 IConfiguration Configuration = new ConfigurationBuilder()
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                .AddEnvironmentVariables()
@@ -142,19 +171,59 @@ namespace PayOut_Aulac_FPT.Controllers
 
                 string conString = ConfigurationExtensions.GetConnectionString(Configuration, request.merchant_id);
 
-                var qrCode = _qRCodeService.Gets(new QRCode()
+                var qrCode = _qRCodeService.Get(new QRCode()
                 {
                     MdcFilePrkID = request.paintent_id,
                     VchPmntPrkID = request.vch_id
                 });
 
-                if (qrCode.Count() == 0)
+                if (qrCode == null)
                 {
                     txn = new txn { result_code = "0", result = "WARNING", message = "Không tìm thấy thông tin thanh toán!" };
                 }
                 else
                 {
-                    txn = new txn { result_code = "200", result = "SUCCESS", message = "Kết nối thành công!" };
+                    var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + qrCode.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+
+                    if (_sha256HexService.SHA256Hex(mSignature) != request.signature)
+                    {
+                        txn = new txn { result_code = "0", result = "WARNING", message = "Dữ liệu giao dịch không chính xác. Vui lòng kiểm tra lại!" };
+                    }
+                    else if (double.Parse(qrCode.amount) == request.amount)
+                    {
+                        txn = new txn { result_code = "200", result = "SUCCESS", message = "Kết nối thành công!" };
+
+                        var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID, patient_id = qrCode.MdcFilePrkID, vch_id = qrCode.vch_id });
+
+                        if (vchPaymentFoxpay.Count() == 0)
+                        {
+                            var insert = _vchPaymentFoxpayService.Create(new VchPaymentFoxpay
+                            {
+                                patient_id = qrCode.MdcFilePrkID,
+                                vch_id = qrCode.vch_id,
+                                payment_type = qrCode.payment_type,
+                                version = request.version,
+                                order_id = request.order_id,
+                                transaction_payment = request.transaction_payment,
+                                amount = request.amount,
+                                StatusReq = (int)EStatusReq.ReqExam,
+                                signature = request.signature
+                            });
+                        }
+                        else if (qrCode.StatusReq != ((int)EStatusReq.Complated).ToString())
+                        {
+                            var insert = _vchPaymentFoxpayService.Patch(new VchPaymentFoxpay
+                            {
+                                VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID,
+                                order_id = request.order_id,
+                                StatusReq = (int)EStatusReq.Examming
+                            });
+                        }
+                        else
+                            txn = new txn { result_code = "0", result = "WARNING", message = "Bệnh nhân đã hoàn thành thanh toán!" };
+                    }
+                    else
+                        txn = new txn { result_code = "0", result = "WARNING", message = "Số tiền giao dịch không đúng!" };
                 }
 
                 return Ok(new SuccessResponse<ConnectPaymentResponse>(

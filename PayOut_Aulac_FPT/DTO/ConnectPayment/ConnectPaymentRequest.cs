@@ -26,7 +26,7 @@ namespace PayOut_Aulac_FPT.DTO.ConnectPayment
         [RequiredCustom]
         public string? psn_payment_id { get; set; }
         [RequiredCustom]
-        public Guid? transaction_payment { get; set; }
+        public string? transaction_payment { get; set; }
         public string? create_time_foxpay { get; set; }
         public string? payment_method { get; set; }
         [RequiredCustom]

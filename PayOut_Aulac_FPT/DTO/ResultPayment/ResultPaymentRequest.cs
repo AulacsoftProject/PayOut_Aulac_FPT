@@ -1,4 +1,5 @@
 ﻿using PayOut_Aulac_FPT.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace PayOut_Aulac_FPT.DTO.ResultPayment
 {
@@ -13,13 +14,14 @@ namespace PayOut_Aulac_FPT.DTO.ResultPayment
         [RequiredCustom]
         public string? order_id { get; set; }
         [RequiredCustom]
-        public string? paintent_id { get; set; }
+        public string? patient_id { get; set; }
         [RequiredCustom]
         public string? vch_id { get; set; }
         [RequiredCustom]
+        [Display(Name = "Người thực hiện thanh toán")]
         public string? payer_id { get; set; }
         [RequiredCustom]
-        public Guid? transaction_payment { get; set; }
+        public string? transaction_payment { get; set; }
         [RequiredCustom]
         public string? signature { get; set; }
         [RequiredCustom]
