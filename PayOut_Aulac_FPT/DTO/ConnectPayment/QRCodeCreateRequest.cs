@@ -2,7 +2,7 @@
 {
     public class QRCodeCreateRequest
     {
-        public string? MdcFilePrkID { get; set; }
-        public string? VchPmntPrkID { get; set; }
+        public int? MdcFilePrkID { get; set; }
+        public int? VchPmntPrkID { get; set; }
     }
 }

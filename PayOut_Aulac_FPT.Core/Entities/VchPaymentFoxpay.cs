@@ -11,9 +11,9 @@ namespace PayOut_Aulac_FPT.Core.Entities
     public class VchPaymentFoxpay:IEntity
     {
         [PrimaryKey]
-        public string? VchPmtFoxpayPrkID { get; set; }
-        public string? patient_id { get; set; }
-        public string? vch_id { get; set; }
+        public int? VchPmtFoxpayPrkID { get; set; }
+        public int? patient_id { get; set; }
+        public int? vch_id { get; set; }
         public string? payment_type { get; set; }
         public string? version { get; set; }
         public string? order_id { get; set; }

@@ -14,9 +14,9 @@ namespace PayOut_Aulac_FPT.DTO.ResultPayment
         [RequiredCustom]
         public string? order_id { get; set; }
         [RequiredCustom]
-        public string? patient_id { get; set; }
+        public int? paintent_id { get; set; }
         [RequiredCustom]
-        public string? vch_id { get; set; }
+        public int? vch_id { get; set; }
         [RequiredCustom]
         [Display(Name = "Người thực hiện thanh toán")]
         public string? payer_id { get; set; }

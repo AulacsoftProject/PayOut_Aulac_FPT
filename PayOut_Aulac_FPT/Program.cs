@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Minio.AspNetCore;
 using PayOut_Aulac_FPT.Infrastructure.Services;
+using PayOut_Aulac_FPT.Hub;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,9 +37,12 @@ builder.Services.AddScoped<ICompanyInfoRepository, CompanyInfoRepository>();
 builder.Services.AddScoped<ICompanyInfoService, CompanyInfoService>();
 builder.Services.AddScoped<IVchPaymentFoxpayRepository, VchPaymentFoxpayRepository>();
 builder.Services.AddScoped<IVchPaymentFoxpayService, VchPaymentFoxpayService>();
+builder.Services.AddScoped<IVchPaymentHISRepository, VchPaymentHISRepository>();
+builder.Services.AddScoped<IVchPaymentHISService, VchPaymentHISService>();
 //builder.Services.AddScoped<ICauHinhRepository, CauHinhRepository>();
 //builder.Services.AddScoped<ICauHinhService, CauHinhService>();
 
+builder.Services.AddSignalR();
 const string CORS_POLICY = "CorsPolicy";
 builder.Services.AddCors(options =>
 {
@@ -137,8 +141,6 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors(CORS_POLICY);
-
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
@@ -146,6 +148,14 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseCors(CORS_POLICY);
+
+app.UseRouting();
+
+app.UseEndpoints(endpoints => {
+    endpoints.MapControllers();
+    endpoints.MapHub<SignalRService>("/qrcode");
+});
 app.MapControllers();
 
 app.Run();

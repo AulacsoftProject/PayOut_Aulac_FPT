@@ -1,24 +1,18 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using PayOut_Aulac_FPT.Core.Entities;
 using PayOut_Aulac_FPT.Core.Interfaces.Services;
 using PayOut_Aulac_FPT.DTO;
 using PayOut_Aulac_FPT.DTO.ConnectPayment;
-using System;
-using Newtonsoft.Json.Linq;
-using Minio;
-using Microsoft.Extensions.Configuration;
 using PayOut_Aulac_FPT.DTO.OTPPayment;
-using System.Security.Cryptography.Xml;
-using Newtonsoft.Json;
-using System.Runtime;
 using PayOut_Aulac_FPT.Core.Utils.Enums;
+using Microsoft.AspNetCore.SignalR;
+using PayOut_Aulac_FPT.Hub;
 
 namespace PayOut_Aulac_FPT.Controllers
 {
     [Tags("Connect Payment")]
+    [ApiController]
     public class ConnectPaymentController : ControllerBase
     {
         //private string url = "https://portal- staging.FPT.vn/payment/get-transaction";
@@ -30,10 +24,11 @@ namespace PayOut_Aulac_FPT.Controllers
         private readonly IUserLoginService _userLoginService;
         private readonly IFoxpayServiceAPI _fboxpayServiceAPI;
         private readonly IVchPaymentFoxpayService _vchPaymentFoxpayService;
+        private IHubContext<SignalRService, ISignalRService> _signalRService;
         private readonly ILogger<ConnectPaymentController> _logger;
         private readonly IMapper _mapper;
 
-        public ConnectPaymentController(ILogger<ConnectPaymentController> logger, ICompanyInfoService companyInfoService, IQRCodeService qRCodeService, IConfiguration configuration, IBase64Service base64Service, ISha256HexService sha256HexService, IUserLoginService userLoginService, IFoxpayServiceAPI foxpayServiceAPI, IVchPaymentFoxpayService vchPaymentFoxpayService, IMapper mapper)
+        public ConnectPaymentController(ILogger<ConnectPaymentController> logger, ICompanyInfoService companyInfoService, IQRCodeService qRCodeService, IConfiguration configuration, IBase64Service base64Service, ISha256HexService sha256HexService, IUserLoginService userLoginService, IFoxpayServiceAPI foxpayServiceAPI, IVchPaymentFoxpayService vchPaymentFoxpayService, IHubContext<SignalRService, ISignalRService> signalRService, IMapper mapper)
         {
             _logger = logger;
             _companyInfoService = companyInfoService;
@@ -44,6 +39,7 @@ namespace PayOut_Aulac_FPT.Controllers
             _userLoginService = userLoginService;
             _fboxpayServiceAPI = foxpayServiceAPI;
             _vchPaymentFoxpayService = vchPaymentFoxpayService;
+            _signalRService = signalRService;
             _mapper = mapper;
         }
 
@@ -65,15 +61,51 @@ namespace PayOut_Aulac_FPT.Controllers
                     IsActive = true
                 });
 
-                var PntInfo = _qRCodeService.Get(new QRCode()
+                var PntInfo = new QRCode();
+
+                if (request.MdcFilePrkID == null)
+                    return Ok(new SuccessResponse<QRCodeCreateResponse>(
+                    new QRCodeCreateResponse()
+                    {
+                        MdcFilePrkID = PntInfo?.MdcFilePrkID,
+                        VchPmntPrkID = PntInfo?.vch_id,
+                        SoCMND = PntInfo?.SoCMND,
+                        InsNum = PntInfo?.InsNum,
+                        PntName = PntInfo?.ho_ten_bn,
+                        PntBirthday = PntInfo?.PntBirthday,
+                        SexName = PntInfo?.SexName,
+                        DateExam = PntInfo?.DateExam,
+                        AmtLineInExc = PntInfo?.amount,
+                        QRCode = new QRCodeInfo()
+                    }
+                ));
+
+                PntInfo = _qRCodeService.Get(new QRCode()
                 {
                     MdcFilePrkID = request.MdcFilePrkID,
                     VchPmntPrkID = request.VchPmntPrkID
                 });
 
+                if (PntInfo == null)
+                    return Ok(new SuccessResponse<QRCodeCreateResponse>(
+                    new QRCodeCreateResponse()
+                    {
+                        MdcFilePrkID = PntInfo?.MdcFilePrkID,
+                        VchPmntPrkID = PntInfo?.vch_id,
+                        SoCMND = PntInfo?.SoCMND,
+                        InsNum = PntInfo?.InsNum,
+                        PntName = PntInfo?.ho_ten_bn,
+                        PntBirthday = PntInfo?.PntBirthday,
+                        SexName = PntInfo?.SexName,
+                        DateExam = PntInfo?.DateExam,
+                        AmtLineInExc = PntInfo?.amount,
+                        QRCode = new QRCodeInfo()
+                    }
+                ));
+
                 var hoTen = _base64Service.Base64Encode(PntInfo.ho_ten_bn);
                 var contentPayment = _base64Service.Base64Encode(PntInfo.content_payment);
-                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + PntInfo.order_id + PntInfo.transaction_payment + PntInfo.paintent_id /*+ PntInfo.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+                //var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + PntInfo.order_id + PntInfo.transaction_payment + PntInfo.paintent_id /*+ PntInfo.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
 
                 var qrCode = new QRCodeInfo()
                 {
@@ -94,7 +126,7 @@ namespace PayOut_Aulac_FPT.Controllers
                     psn_payment_id = PntInfo.psn_payment_id,
                     create_time_payment = PntInfo.create_time_payment,
                     transaction_payment = PntInfo.transaction_payment,
-                    signature = _sha256HexService.SHA256Hex(mSignature),
+                    signature = PntInfo.signature,
                     mcc = PntInfo.mcc,
                     country_id = PntInfo.country_id,
                     merchant_name = loginInfo.UserPaymentName,
@@ -113,27 +145,31 @@ namespace PayOut_Aulac_FPT.Controllers
                         payment_type = PntInfo.payment_type,
                         version = versionFoxpay,
                         order_id = PntInfo.order_id,
-                        transaction_payment = PntInfo.transaction_payment.ToString(),
+                        transaction_payment = PntInfo.transaction_payment,
                         amount = double.Parse(PntInfo.amount),
                         StatusReq = (int)EStatusReq.ReqExam,
-                        signature = _sha256HexService.SHA256Hex(mSignature)
+                        signature = PntInfo.signature
                     });
                 }
 
+                var qrCodeResponse = new QRCodeCreateResponse()
+                {
+                    MdcFilePrkID = PntInfo.MdcFilePrkID,
+                    VchPmntPrkID = PntInfo.vch_id,
+                    SoCMND = PntInfo.SoCMND,
+                    InsNum = PntInfo.InsNum,
+                    PntName = PntInfo.ho_ten_bn,
+                    PntBirthday = PntInfo.PntBirthday,
+                    SexName = PntInfo.SexName,
+                    DateExam = PntInfo.DateExam,
+                    AmtLineInExc = PntInfo.amount,
+                    QRCode = qrCode
+                };
+
+                _signalRService.Clients.All.StartConnect(qrCodeResponse);
+
                 return Ok(new SuccessResponse<QRCodeCreateResponse>(
-                    new QRCodeCreateResponse()
-                    {
-                        MdcFilePrkID = PntInfo.MdcFilePrkID,
-                        VchPmntPrkID = PntInfo.vch_id,
-                        SoCMND = PntInfo.SoCMND,
-                        InsNum = PntInfo.InsNum,
-                        PntName = PntInfo.ho_ten_bn,
-                        PntBirthday = PntInfo.PntBirthday,
-                        SexName = PntInfo.SexName,
-                        DateExam = PntInfo.DateExam,
-                        AmtLineInExc = PntInfo.amount,
-                        QRCode = qrCode
-                    }
+                    qrCodeResponse
                 ));
             }
             catch (Exception ex)
@@ -179,7 +215,7 @@ namespace PayOut_Aulac_FPT.Controllers
 
                 if (qrCode == null)
                 {
-                    txn = new txn { result_code = "0", result = "WARNING", message = "Không tìm thấy thông tin thanh toán!" };
+                    txn = new txn { result_code = "404", result = "NOTFOUND", message = "Không tìm thấy thông tin thanh toán!" };
                 }
                 else
                 {
@@ -216,6 +252,7 @@ namespace PayOut_Aulac_FPT.Controllers
                             {
                                 VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID,
                                 order_id = request.order_id,
+                                transaction_payment = request.transaction_payment,
                                 StatusReq = (int)EStatusReq.Examming
                             });
                         }
@@ -261,7 +298,7 @@ namespace PayOut_Aulac_FPT.Controllers
             try
             {
                 var request = Newtonsoft.Json.JsonConvert.DeserializeObject<OTPPaymentRequest>(data);
-                string resultCode = "", result = "", message = "";
+
                 IConfiguration Configuration = new ConfigurationBuilder()
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                .AddEnvironmentVariables()
@@ -274,18 +311,78 @@ namespace PayOut_Aulac_FPT.Controllers
                 //    MdcFilePrkID = request.paintent_id,
                 //    VchPmntPrkID = request.vch_id
                 //});
-
-                if (request.otp_code.Equals("200"))
+                string resultCode = "", result = "", message = "";
+                var versionFoxpay = _configuration["Foxpay:Version"];
+                var companyInfo = _companyInfoService.Get(new CompanyInfo());
+                var loginInfo = _userLoginService.Get(new UserLogin
                 {
-                    resultCode = "200";
-                    result = "SUCCESS";
-                    message = "Giao dịch thành công!";
+                    UserPaymentID = companyInfo.InsPrvnCode + companyInfo.InsOfficeCode,
+                    IsActive = true
+                });
+
+                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + request.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+
+                var vchPaymentFoxpay = _vchPaymentFoxpayService.Get(new VchPaymentFoxpay { patient_id = request.paintent_id, transaction_payment = request.transaction_payment });
+
+                if (vchPaymentFoxpay == null)
+                {
+                    resultCode = "404";
+                    result = "NOTFOUND";
+                    message = "Không tìm thấy thông tin thanh toán!";
                 }
                 else
                 {
-                    resultCode = "0";
-                    result = "WARNING";
-                    message = "Giao dịch không thành công!";
+                    if (_sha256HexService.SHA256Hex(mSignature) != request.signature)
+                    {
+                        resultCode = "0";
+                        result = "WARNING";
+                        message = "Dữ liệu giao dịch không chính xác. Vui lòng kiểm tra lại!";
+                    }
+                    else
+                    {
+                        if (request.otp_code.Equals("200"))
+                        {
+                            resultCode = "200";
+                            result = "INVOICE_SUCCESS";
+                            message = "Giao dịch thành công!";
+                        }
+                        else if (request.otp_code.Equals("5"))
+                        {
+                            resultCode = "5";
+                            result = "INVOICE_CANCEL";
+                            message = "Giao dịch bị hủy!";
+                        }
+                        else if (request.otp_code.Equals("-1"))
+                        {
+                            resultCode = "-1";
+                            result = "INVOICE_ERROR";
+                            message = "Giao dịch lỗi!";
+                        }
+                        else if (request.otp_code.Equals("-2"))
+                        {
+                            resultCode = "-2";
+                            result = "INVOICE_FAILURE";
+                            message = "Giao dịch thất bại!";
+                        }
+                        else if (request.otp_code.Equals("0"))
+                        {
+                            resultCode = "0";
+                            result = "INVOICE_INIT";
+                            message = "Giao dịch đã được khởi tạo!";
+                        }
+                        else if (request.otp_code.Equals("1"))
+                        {
+                            resultCode = "1";
+                            result = "INVOICE_INIT_TXN";
+                            message = "Giao dịch đã khởi tạo txn!";
+                        }
+                        else if (request.otp_code.Equals("2"))
+                        {
+                            resultCode = "2";
+                            result = "INVOICE_AUTHORIZED";
+                            message = "Giao dịch đã xác thực!";
+                        }
+                    }
                 }
 
                 return Ok(new SuccessResponse<OTPPaymentResponse>(

@@ -128,14 +128,14 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
                     case HttpStatusCode.OK:
                         var jsonString = await response.Content.ReadAsStringAsync();
                         var data = JsonConvert.DeserializeObject<ResultFoxpay>(jsonString);
-                        //if (data?.result_code == "200")
-                        //{
+                        if (data?.result_code != null)
+                        {
                             return data;
-                        //}
-                        //else
-                        //{
-                        //    throw new Exception(data?.message);
-                        //}
+                        }
+                        else
+                        {
+                            throw new Exception(data?.error_description);
+                        }
                     default: throw new NotificationException("Không thể kiểm tra giao dịch, vui lòng thử lại!");
                 }
             }
