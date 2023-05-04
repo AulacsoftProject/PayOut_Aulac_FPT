@@ -6,6 +6,7 @@
         public string? merchant_id { get; set; }
         public string? terminal_id { get; set; }
         public string? order_id { get; set; }
+        public string? vch_id { get; set; }
         public int? paintent_id { get; set; }
         public string? create_time_payment { get; set; }
         public string? transaction_payment { get; set; }

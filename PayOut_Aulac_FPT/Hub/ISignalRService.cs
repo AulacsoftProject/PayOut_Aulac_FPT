@@ -4,6 +4,7 @@ namespace PayOut_Aulac_FPT.Hub
 {
     public interface ISignalRService
     {
-        Task StartConnect(QRCodeCreateResponse? strConnect);
+        Task StartConnect(object? strConnect);
+        Task SendRoom(string? roomName, object? strResult);
     }
 }

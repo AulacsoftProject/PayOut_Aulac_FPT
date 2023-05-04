@@ -19,10 +19,4 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.11" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Aulac.Global">
-      <HintPath>..\package\Aulac.Global.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

@@ -42,19 +42,19 @@ builder.Services.AddScoped<IVchPaymentHISService, VchPaymentHISService>();
 //builder.Services.AddScoped<ICauHinhRepository, CauHinhRepository>();
 //builder.Services.AddScoped<ICauHinhService, CauHinhService>();
 
-builder.Services.AddSignalR();
 const string CORS_POLICY = "CorsPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(CORS_POLICY, builder =>
+    options.AddPolicy(name: CORS_POLICY, builder =>
     {
         //builder.WithOrigins("").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithOrigins("http://apphis.hopto.org:1500"); ;
         //builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
         //builder.SetIsOriginAllowed(origin => true);
     });
 });
 
+builder.Services.AddSignalR();
 builder.Services.AddOptions();
 
 builder.Services.AddTransient<IDbConnection>(db => new SqlConnection(
@@ -89,8 +89,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddControllers(
-    )
+builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddSwaggerGen(swagger =>
@@ -148,9 +147,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseCors(CORS_POLICY);
-
 app.UseRouting();
+app.UseCors(CORS_POLICY);
 
 app.UseEndpoints(endpoints => {
     endpoints.MapControllers();

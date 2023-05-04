@@ -58,10 +58,4 @@
     <ProjectReference Include="..\PayOut_Aulac_FPT.Infrastructure\PayOut_Aulac_FPT.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Aulac.Global">
-      <HintPath>bin\Debug\net6.0\Aulac.Global.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

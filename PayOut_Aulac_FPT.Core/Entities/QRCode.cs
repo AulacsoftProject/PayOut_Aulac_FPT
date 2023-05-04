@@ -30,6 +30,8 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? psn_payment_id { get; set; }
         public string? create_time_payment { get; set; }
         public string? transaction_payment { get; set; }
+        public string? transaction_reference { get;set; }
+        public string? optional { get; set; }
         public string? signature { get; set; }
         public string? mcc { get; set; }
         public string? country_id { get; set; }

@@ -10,6 +10,8 @@ namespace PayOut_Aulac_FPT.Core.Interfaces.Services
     public interface IFoxpayServiceAPI
     {
         //public Task<HttpResponseMessage?> PostRequestAsync(string path, string encodedBase64, string paramJson, bool isLogin = false, bool hasLogin = false);
-        public Task<ResultFoxpay?> CheckTransaction(PaymentFoxpay resultPayment);
+        public Task<ResultCheckFoxpay?> CheckTransaction(CheckTransaction resultPayment);
+        public Task<ResultCancelFoxpay?> CancelTransaction(CancelTransaction resultPayment);
+        public Task<ResultReconcileFoxpay?> ReconcileTransaction(ReconcileTransaction resultFoxpay);
     }
 }

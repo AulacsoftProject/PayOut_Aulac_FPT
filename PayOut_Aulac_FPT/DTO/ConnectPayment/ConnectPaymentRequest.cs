@@ -13,6 +13,7 @@ namespace PayOut_Aulac_FPT.DTO.ConnectPayment
         [RequiredCustom]
         public string? terminal_id { get; set; }
         public string? order_id { get; set; }
+        public string? optional { get; set; }
         [RequiredCustom]
         public int? paintent_id { get; set; }
         public string? ho_ten_bn { get; set; }

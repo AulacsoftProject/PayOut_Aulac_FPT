@@ -8,6 +8,9 @@ using PayOut_Aulac_FPT.DTO.OTPPayment;
 using PayOut_Aulac_FPT.Core.Utils.Enums;
 using Microsoft.AspNetCore.SignalR;
 using PayOut_Aulac_FPT.Hub;
+using Microsoft.AspNetCore.Cors;
+using System.Runtime;
+using Microsoft.Extensions.Options;
 
 namespace PayOut_Aulac_FPT.Controllers
 {
@@ -111,13 +114,13 @@ namespace PayOut_Aulac_FPT.Controllers
                 {
                     version = versionFoxpay,
                     merchant_id = loginInfo.merchant_id,
-                    terminal_id = loginInfo.terminal_id,
+                    terminal_id = loginInfo.merchant_id + "_" + loginInfo.terminal_id,
                     order_id = PntInfo.order_id,
                     paintent_id = PntInfo.paintent_id,
-                    cccd_id = PntInfo.SoCMND,
-                    bhyt_id = PntInfo.InsNum,
+                    //cccd_id = PntInfo.SoCMND,
+                    //bhyt_id = PntInfo.InsNum,
                     ho_ten_bn = hoTen,
-                    ngay_sinh_bn = PntInfo.PntBirthday,
+                    //ngay_sinh_bn = PntInfo.PntBirthday,
                     vch_id = PntInfo.vch_id,
                     payment_type = PntInfo.payment_type,
                     amount = PntInfo.amount,
@@ -134,18 +137,22 @@ namespace PayOut_Aulac_FPT.Controllers
                     terminal_name = PntInfo.terminal_name,
                 };
 
-                var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = PntInfo.VchPmtFoxpayPrkID, patient_id = PntInfo.MdcFilePrkID, vch_id = PntInfo.vch_id });
+                var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = PntInfo.VchPmtFoxpayPrkID, patient_id = PntInfo.MdcFilePrkID, vch_id = PntInfo.vch_id.ToString() });
 
+                var transactionReference = DateTime.Now.ToString("yyyyMMddHHmmss") + PntInfo.MdcFilePrkID;
                 if (vchPaymentFoxpay.Count() == 0)
                 {
                     var insert = _vchPaymentFoxpayService.Create(new VchPaymentFoxpay
                     {
                         patient_id = PntInfo.MdcFilePrkID,
-                        vch_id = PntInfo.vch_id,
+                        vch_id = PntInfo.vch_id.ToString(),
                         payment_type = PntInfo.payment_type,
                         version = versionFoxpay,
-                        order_id = PntInfo.order_id,
+                        order_id = PntInfo.vch_id.ToString(),
+                        transaction_reference = transactionReference,
+                        create_time_payment = PntInfo.create_time_payment,
                         transaction_payment = PntInfo.transaction_payment,
+                        optional = null,
                         amount = double.Parse(PntInfo.amount),
                         StatusReq = (int)EStatusReq.ReqExam,
                         signature = PntInfo.signature
@@ -166,7 +173,9 @@ namespace PayOut_Aulac_FPT.Controllers
                     QRCode = qrCode
                 };
 
-                _signalRService.Clients.All.StartConnect(qrCodeResponse);
+                //_signalRService.Clients.All.StartConnect(qrCodeResponse);
+                string roomName = string.Format("qrcode/{0}", qrCode?.terminal_id);
+                _signalRService.Clients.Group(roomName).SendRoom(roomName, qrCodeResponse);
 
                 return Ok(new SuccessResponse<QRCodeCreateResponse>(
                     qrCodeResponse
@@ -219,8 +228,8 @@ namespace PayOut_Aulac_FPT.Controllers
                 }
                 else
                 {
-                    var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + qrCode.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
-
+                    var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.merchant_id + "_" + loginInfo.terminal_id /*+ PntInfo.qr_type + request.order_id*/ + request.order_id + request.transaction_payment + qrCode.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+                    
                     if (_sha256HexService.SHA256Hex(mSignature) != request.signature)
                     {
                         txn = new txn { result_code = "0", result = "WARNING", message = "Dữ liệu giao dịch không chính xác. Vui lòng kiểm tra lại!" };
@@ -229,18 +238,23 @@ namespace PayOut_Aulac_FPT.Controllers
                     {
                         txn = new txn { result_code = "200", result = "SUCCESS", message = "Kết nối thành công!" };
 
-                        var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID, patient_id = qrCode.MdcFilePrkID, vch_id = qrCode.vch_id });
+                        var vchPaymentFoxpay = _vchPaymentFoxpayService.CheckExist(new VchPaymentFoxpay { VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID, patient_id = qrCode.MdcFilePrkID, vch_id = qrCode.vch_id.ToString() });
 
+                        var transactionReference = DateTime.Now.ToString("yyyyMMddHHmmss") + qrCode.MdcFilePrkID;
                         if (vchPaymentFoxpay.Count() == 0)
                         {
                             var insert = _vchPaymentFoxpayService.Create(new VchPaymentFoxpay
                             {
                                 patient_id = qrCode.MdcFilePrkID,
-                                vch_id = qrCode.vch_id,
+                                vch_id = qrCode.vch_id.ToString(),
                                 payment_type = qrCode.payment_type,
                                 version = request.version,
-                                order_id = request.order_id,
+                                order_id = request.vch_id.ToString(),
+                                create_time_payment = qrCode.create_time_payment,
                                 transaction_payment = request.transaction_payment,
+                                transaction_reference = transactionReference,
+                                optional = request.optional,
+                                payer_id = request.psn_payment_id,
                                 amount = request.amount,
                                 StatusReq = (int)EStatusReq.ReqExam,
                                 signature = request.signature
@@ -252,7 +266,9 @@ namespace PayOut_Aulac_FPT.Controllers
                             {
                                 VchPmtFoxpayPrkID = qrCode.VchPmtFoxpayPrkID,
                                 order_id = request.order_id,
+                                payer_id=request.psn_payment_id,
                                 transaction_payment = request.transaction_payment,
+                                optional = request.optional,
                                 StatusReq = (int)EStatusReq.Examming
                             });
                         }
@@ -320,9 +336,9 @@ namespace PayOut_Aulac_FPT.Controllers
                     IsActive = true
                 });
 
-                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + request.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.merchant_id + "_" + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + request.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
 
-                var vchPaymentFoxpay = _vchPaymentFoxpayService.Get(new VchPaymentFoxpay { patient_id = request.paintent_id, transaction_payment = request.transaction_payment });
+                var vchPaymentFoxpay = _vchPaymentFoxpayService.Get(new VchPaymentFoxpay { patient_id = request.paintent_id, vch_id = request.vch_id });
 
                 if (vchPaymentFoxpay == null)
                 {
