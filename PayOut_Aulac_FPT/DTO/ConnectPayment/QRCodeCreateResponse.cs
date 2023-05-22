@@ -47,6 +47,8 @@
     {
         public string? result_code { get; set; }
         public string? result { get; set; }
+        public string? vch_id { get; set; }
+        public string? payment_type { get; set; }
         public string? message { get; set; }
     }
 }

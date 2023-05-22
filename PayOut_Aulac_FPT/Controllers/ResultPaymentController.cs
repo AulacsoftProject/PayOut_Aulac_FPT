@@ -14,6 +14,8 @@ using System.Security.Cryptography.Xml;
 using System;
 using Microsoft.AspNetCore.SignalR;
 using PayOut_Aulac_FPT.Hub;
+using PayOut_Aulac_FPT.Core.Exceptions;
+using System.Net;
 
 namespace PayOut_Aulac_FPT.Controllers
 {
@@ -31,9 +33,10 @@ namespace PayOut_Aulac_FPT.Controllers
         private readonly IBase64Service _base64Service;
         private readonly IQRCodeService _qRCodeService;
         private readonly IVchPaymentHISService _vchPaymentHISService;
-        private IHubContext<SignalRService, ISignalRService> _signalRService;
+        //private IHubContext<SignalRService, ISignalRService> _signalRService;
+        private readonly IHubContext<SignalRService> _signalRService;
 
-        public ResultPaymentController(ILogger<ResultPaymentController> logger, IFoxpayServiceAPI foxpayServiceAPI, IVchPaymentFoxpayService vchPaymentFoxpayService, IConfiguration configuration, ICompanyInfoService companyInfoService, IUserLoginService userLoginService, ISha256HexService sha256HexService, IVchPaymentHISService vchPaymentHISService, IBase64Service base64Service, IQRCodeService qRCodeService, IHubContext<SignalRService, ISignalRService> signalRService)
+        public ResultPaymentController(ILogger<ResultPaymentController> logger, IFoxpayServiceAPI foxpayServiceAPI, IVchPaymentFoxpayService vchPaymentFoxpayService, IConfiguration configuration, ICompanyInfoService companyInfoService, IUserLoginService userLoginService, ISha256HexService sha256HexService, IVchPaymentHISService vchPaymentHISService, IBase64Service base64Service, IQRCodeService qRCodeService, IHubContext<SignalRService> signalRService)
         {
             _logger = logger;
             _foxpayServiceAPI = foxpayServiceAPI;
@@ -57,10 +60,11 @@ namespace PayOut_Aulac_FPT.Controllers
         //public ActionResult<SuccessResponse<PaymentResponse>> Items([FromQuery] ResultPaymentRequest request)
         public async Task<ActionResult<SuccessResponse<ResultPaymentResponse>>> ItemsAsync([FromQuery] string data)
         {
+            string resultCode = "", result = "", message = "", messageHub = "", terminal_id = "";
             try
             {
                 var request = JsonConvert.DeserializeObject<ResultPaymentRequest>(data);
-
+                terminal_id = request?.terminal_id;
                 IConfiguration Configuration = new ConfigurationBuilder()
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                .AddEnvironmentVariables()
@@ -72,29 +76,22 @@ namespace PayOut_Aulac_FPT.Controllers
                        .ConfigurationExtensions
                        .GetConnectionString(Configuration, request.merchant_id);
 
-                string resultCode = "", result = "", message = "";
                 var versionFoxpay = _configuration["Foxpay:Version"];
                 var companyInfo = _companyInfoService.Get(new CompanyInfo());
                 var loginInfo = _userLoginService.Get(new UserLogin
                 {
-                    UserPaymentID = companyInfo.InsPrvnCode + companyInfo.InsOfficeCode,
+                    merchant_id = request.merchant_id,
+                    terminal_id = request.terminal_id.Split('_')[1].ToString(),
                     IsActive = true
                 });
 
-                if (loginInfo == null)
-                {
-                    resultCode = "404";
-                    result = "NOTFOUND";
-                    message = "Không tìm thấy thông tin thanh toán hoặc đã hoàn thành thanh toán!";
-                }
-
                 var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.merchant_id + "_" + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + request.order_id + request.transaction_payment + request.paintent_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
-                
+
                 if (_sha256HexService.SHA256Hex(mSignature) != request.signature)
                 {
-                    resultCode = "401";
-                    result = "UNAUTHORIZED";
-                    message = "Chữ ký không chính xác. Vui lòng kiểm tra lại!";
+                    resultCode = "0";
+                    result = "invalid_signature";
+                    message = "Chữ ký không hợp lệ!";
                 }
                 else
                 {
@@ -119,6 +116,7 @@ namespace PayOut_Aulac_FPT.Controllers
                         _vchPaymentFoxpayService.Patch(new VchPaymentFoxpay
                         {
                             VchPmtFoxpayPrkID = query.VchPmtFoxpayPrkID,
+                            terminal_id = loginInfo.merchant_id + "_" + loginInfo.terminal_id,
                             order_id = request.order_id,
                             payer_id = request.payer_id,
                             transaction_payment = request.transaction_payment,
@@ -134,26 +132,43 @@ namespace PayOut_Aulac_FPT.Controllers
                             StatusReq = (int)EStatusReq.Complated
                         });
 
-                        resultCode = resultTrangThaiGiaoDich?.result_code;
-                        result = resultTrangThaiGiaoDich?.result;
-                        message = resultTrangThaiGiaoDich?.message;
+                        resultCode = "200";
+                        result = "success_completed";
+                        message = "Thành công.";
+
+                        switch (query.payment_type)
+                        {
+                            case "0":
+                                messageHub = "Kết nối ví thành công!";
+                                break;
+                            case "1":
+                                messageHub = "Hệ thống đã thực hiện thanh toán tạm thu hoàn thành!";
+                                break;
+                            case "2":
+                                messageHub = "Hệ thống đã thực hiện thanh toán thu thêm hoàn thành!";
+                                break;
+                            case "3":
+                                messageHub = "Hệ thống đã thực hiện thanh toán hoàn ứng hoàn thành!";
+                                break;
+                        }
                     }
                     else
                     {
                         resultCode = "0";
-                        result = "WARNING";
-                        message = resultTrangThaiGiaoDich?.message;
+                        result = "invalid_error";
+                        messageHub = message = "Có lỗi xảy ra!";
                     }
 
                     var sendHub = new ResultInfo()
                     {
                         result_code = resultCode,
+                        payment_type = query.payment_type,
                         result = result,
-                        message = message
+                        message = messageHub
                     };
 
-                    string roomName = string.Format("qrcode/{0}", request?.terminal_id);
-                   await _signalRService.Clients.Group(roomName).SendRoom(roomName, sendHub);
+                    string roomName = string.Format("{0}", request?.terminal_id);
+                    await _signalRService.Clients.Group(roomName).SendAsync("ReceiveMessage", sendHub);
                 }
 
                 return Ok(new SuccessResponse<ResultPaymentResponse>(
@@ -174,7 +189,38 @@ namespace PayOut_Aulac_FPT.Controllers
             }
             catch (Exception ex)
             {
-                return Ok(new ErrorResponse(ex.Message));
+                resultCode = "500";
+                result = "internal_server_error";
+                message = "Lỗi hệ thống!";
+                var resultResponse = new SuccessResponse<ResultPaymentResponse>(
+                        new ResultPaymentResponse
+                        {
+                            version = null,
+                            merchant_id = null,
+                            terminal_id = null,
+                            order_id = null,
+                            paintent_id = null,
+                            vch_id = null,
+                            signature = null,
+                            result_code = resultCode,
+                            result = result,
+                            message = message
+                        }
+                    );
+                resultResponse.Success = false;
+
+                var sendHub = new ResultInfo()
+                {
+                    result_code = resultCode,
+                    payment_type = null,
+                    result = result,
+                    message = messageHub
+                };
+
+                string roomName = string.Format("{0}", terminal_id);
+                await _signalRService.Clients.Group(roomName).SendAsync("ReceiveMessage", sendHub);
+
+                return Ok(resultResponse);
             }
         }
 
@@ -242,6 +288,23 @@ namespace PayOut_Aulac_FPT.Controllers
                 };
 
                 var resultTrangThaiGiaoDich = await _foxpayServiceAPI.CancelTransaction(cancelTransaction);
+                var query = _vchPaymentFoxpayService.Get(new VchPaymentFoxpay { VchPmtFoxpayPrkID = request.VchPmtFoxpayPrkID });
+
+                if (resultTrangThaiGiaoDich?.result_code == "200")
+                {
+                    _vchPaymentFoxpayService.Patch(new VchPaymentFoxpay
+                    {
+                        VchPmtFoxpayPrkID = query.VchPmtFoxpayPrkID,
+                        StatusReq = (int)EStatusReq.LostExam
+                    });
+
+                    _vchPaymentHISService.Patch(new VchPaymentHIS
+                    {
+                        VchPmntPrkID = int.Parse(query.vch_id),
+                        MdcFilePrkID = query.patient_id,
+                        StatusReq = (int)EStatusReq.LostExam
+                    });
+                }
 
                 return Ok(new SuccessResponse<CancelPaymentResponse>(
                         new CancelPaymentResponse()
@@ -278,10 +341,46 @@ namespace PayOut_Aulac_FPT.Controllers
         //public ActionResult<SuccessResponse<PaymentResponse>> Items([FromQuery] ConnectPaymentRequest request)
         public async Task<ActionResult<SuccessResponse<ReconcilePaymentResponse>>> Items_ReconcileAsync([FromQuery] string data)
         {
+            string resultCode = "", result = "", message = "";
             try
             {
-                string resultCode = "", result = "", message = "";
                 var request = Newtonsoft.Json.JsonConvert.DeserializeObject<ReconcilePaymentRequest>(data);
+
+                if (string.IsNullOrEmpty(request?.merchant_id) || string.IsNullOrEmpty(request.date_payment_from) || string.IsNullOrEmpty(request.date_payment_to) || string.IsNullOrEmpty(request.psn_payment_id) || request.page_size == 0 || string.IsNullOrEmpty(request.signature))
+                {
+                    resultCode = "0";
+                    result = "invalid_parameter";
+                    message = "Tham số không đúng hoặc không đầy đủ!";
+                }
+                else
+                {
+                    try
+                    {
+                        DateTime tmpDateTime_From = new DateTime();
+                        DateTime tmpDateTime_To = new DateTime();
+                        tmpDateTime_From = Convert.ToDateTime(request.date_payment_from);
+                        tmpDateTime_To = Convert.ToDateTime(request?.date_payment_to);
+
+                        //if(tmpDateTime_From > DateTime.Now)
+                        //{
+                        //    resultCode = "0";
+                        //    result = "greater_than_present_time";
+                        //    message = "Ngày tìm kiếm không được lớn hơn ngày hiện tại!";
+                        //}
+                        //else if(tmpDateTime_From > tmpDateTime_To)
+                        //{
+                        //    resultCode = "0";
+                        //    result = "date_payment_from_cannot_greater_than_date_payment_to";
+                        //    message = "Thời gian tìm kiếm từ ngày không được lớn hơn đến ngày!";
+                        //}
+                    }
+                    catch (Exception)
+                    {
+                        resultCode = "0";
+                        result = "invalid_date_payment";
+                        message = "Tham số không đúng hoặc không đầy đủ!";
+                    }
+                }
 
                 IConfiguration Configuration = new ConfigurationBuilder()
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -294,9 +393,43 @@ namespace PayOut_Aulac_FPT.Controllers
                 var companyInfo = _companyInfoService.Get(new CompanyInfo());
                 var loginInfo = _userLoginService.Get(new UserLogin
                 {
-                    UserPaymentID = companyInfo.InsPrvnCode + companyInfo.InsOfficeCode,
+                    UserPaymentID = request?.merchant_id,
                     IsActive = true
                 });
+
+                if (loginInfo == null)
+                {
+                    resultCode = "0";
+                    result = "invalid_merchant_or_terminal";
+                    message = "Đối tác không hợp lệ!";
+                }
+                else if (loginInfo.IsActiveSystem == "0")
+                {
+                    resultCode = "503";
+                    result = "server_maintenance";
+                    message = "Hệ thống đang được bảo trì!";
+                }
+
+                if (!string.IsNullOrEmpty(resultCode))
+                {
+                    return Ok(new SuccessResponse<CheckTransactionResponse>(
+                        new CheckTransactionResponse()
+                        {
+                            version = null,
+                            merchant_id = null,
+                            terminal_id = null,
+                            order_id = null,
+                            patient_id = null,
+                            vch_id = null,
+                            signature = null,
+                            result_code = resultCode,
+                            result = result,
+                            message = message,
+                            error = null,
+                            error_description = null
+                        }
+                    ));
+                }
 
                 var mSignature = versionFoxpay + loginInfo.merchant_id + request?.date_payment_from + request?.date_payment_to + request?.psn_payment_id + request?.current_page + request?.page_size + loginInfo.secret_key;
 
@@ -329,7 +462,183 @@ namespace PayOut_Aulac_FPT.Controllers
             }
             catch (Exception ex)
             {
-                return Ok(new ErrorResponse(ex.Message));
+                resultCode = "500"; result = "internal_server_error"; message = "Lỗi hệ thống!";
+                var resultResponse = new SuccessResponse<ReconcilePaymentResponse>(
+                        new ReconcilePaymentResponse
+                        {
+                            error_code = resultCode,
+                            error_desc = result,
+                            message = message,
+                            code = null,
+                            error = null,
+                            data = null,
+                            error_description = null
+                        }
+                    );
+                resultResponse.Success = false;
+                return Ok(resultResponse);
+            }
+        }
+
+        /// <summary>
+        /// API kiểm tra trạng thái giao dịch Foxpay
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        [HttpPost("api/payment/check-transaction")]
+        //public ActionResult<SuccessResponse<PaymentResponse>> Items([FromQuery] ConnectPaymentRequest request)
+        public async Task<ActionResult<SuccessResponse<CheckTransactionResponse>>> Items_CheckTransaction([FromQuery] CheckTransactionRequest request)
+        {
+            string resultCode = "", result = "", message = "";
+            try
+            {
+                IConfiguration Configuration = new ConfigurationBuilder()
+               .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+               .AddEnvironmentVariables()
+               .Build();
+
+                string conString = ConfigurationExtensions.GetConnectionString(Configuration, request?.HspInsCode);
+                var paymentFoxpay = _vchPaymentFoxpayService.Get(new VchPaymentFoxpay { patient_id = int.Parse(request?.MdcFilePrkID), vch_id = request.VchPmntPrkID });
+
+                var versionFoxpay = _configuration["Foxpay:Version"];
+                var companyInfo = _companyInfoService.Get(new CompanyInfo());
+                var loginInfo = _userLoginService.Get(new UserLogin
+                {
+                    merchant_id = request.HspInsCode,
+                    terminal_id = paymentFoxpay.terminal_id.Split('_')[1].ToString(),
+                    IsActive = true
+                });
+
+                if (loginInfo == null)
+                {
+                    resultCode = "0";
+                    result = "invalid_merchant_or_terminal";
+                    message = "Đối tác không hợp lệ!";
+                }
+                else if (paymentFoxpay == null)
+                {
+                    resultCode = "404";
+                    result = "notfound";
+                    message = "Giao dịch không tồn tại!";
+                }
+                else if (loginInfo.IsActiveSystem == "0")
+                {
+                    resultCode = "503";
+                    result = "server_maintenance";
+                    message = "Hệ thống đang được bảo trì!";
+                }
+
+                if (!string.IsNullOrEmpty(resultCode))
+                {
+                    return Ok(new SuccessResponse<CheckTransactionResponse>(
+                        new CheckTransactionResponse()
+                        {
+                            version = null,
+                            merchant_id = null,
+                            terminal_id = null,
+                            order_id = null,
+                            patient_id = null,
+                            vch_id = null,
+                            signature = null,
+                            result_code = resultCode,
+                            result = result,
+                            message = message,
+                            error = null,
+                            error_description = null
+                        }
+                    ));
+                }
+
+                var mSignature = versionFoxpay + loginInfo.merchant_id + loginInfo.merchant_id + "_" + loginInfo.terminal_id /*+ PntInfo.qr_type*/ + paymentFoxpay.vch_id + paymentFoxpay.transaction_payment + paymentFoxpay.patient_id /*+ qrCode.amount + PntInfo.currency + PntInfo.description + PntInfo.expired_time + PntInfo.customer_code + PntInfo.merchant_secret_key*/ + loginInfo.secret_key;
+                //Dùng API kiểm tra trạng thái giao dịch của Foxpay
+                CheckTransaction checkTransaction = new CheckTransaction
+                {
+                    version = paymentFoxpay.version,
+                    merchant_id = loginInfo.merchant_id,
+                    terminal_id = loginInfo.merchant_id + "_" + loginInfo.terminal_id,
+                    vch_id = paymentFoxpay.vch_id,
+                    transaction_payment = paymentFoxpay.transaction_payment,
+                    patient_id = paymentFoxpay.patient_id,
+                    signature = _sha256HexService.SHA256Hex(mSignature)
+                };
+
+                var checkFoxpay = await _foxpayServiceAPI.CheckTransaction(checkTransaction);
+                if (checkFoxpay.result_code == "0")
+                {
+                    resultCode = "0";
+                    result = "payment_unrealized";
+                    message = "Chưa thanh toán!";
+                }
+                else if (checkFoxpay.result_code == "1")
+                {
+                    resultCode = "1";
+                    result = "payment_completed";
+                    message = "Thanh toán thành công!";
+                }
+                else if (checkFoxpay.result_code == "2")
+                {
+                    resultCode = "2";
+                    result = "payment_failed";
+                    message = "Thanh toán thất bại!";
+                }
+                else if (checkFoxpay.result_code == "3")
+                {
+                    resultCode = "3";
+                    result = "payment_pending";
+                    message = "Thanh toán chờ xử lý";
+                }
+
+                var sendHub = new ResultInfo()
+                {
+                    result_code = resultCode,
+                    payment_type = null,
+                    result = result,
+                    message = message
+                };
+
+                string roomName = string.Format("{0}", paymentFoxpay.terminal_id);
+                await _signalRService.Clients.Group(roomName).SendAsync("ReceiveMessage", sendHub);
+
+                return Ok(new SuccessResponse<CheckTransactionResponse>(
+                        new CheckTransactionResponse()
+                        {
+                            version = checkFoxpay?.version,
+                            merchant_id = checkFoxpay?.merchant_id,
+                            terminal_id = checkFoxpay?.terminal_id,
+                            order_id = checkFoxpay?.order_id,
+                            patient_id = checkFoxpay?.patient_id,
+                            vch_id = checkFoxpay?.vch_id,
+                            signature = checkFoxpay?.signature,
+                            result_code = resultCode,
+                            result = result,
+                            message = message,
+                            error = checkFoxpay?.error,
+                            error_description = checkFoxpay?.error_description
+                        }
+                    ));
+            }
+            catch (Exception ex)
+            {
+                resultCode = "500"; result = "internal_server_error"; message = "Lỗi hệ thống!";
+                var resultResponse = new SuccessResponse<CheckTransactionResponse>(
+                        new CheckTransactionResponse
+                        {
+                            version = null,
+                            merchant_id = null,
+                            terminal_id = null,
+                            order_id = null,
+                            patient_id = null,
+                            vch_id = null,
+                            signature = null,
+                            result_code = resultCode,
+                            result = result,
+                            message = message,
+                            error = null,
+                            error_description = null
+                        }
+                    );
+                resultResponse.Success = false;
+                return Ok(resultResponse);
             }
         }
     }

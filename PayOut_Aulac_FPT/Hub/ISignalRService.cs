@@ -5,6 +5,8 @@ namespace PayOut_Aulac_FPT.Hub
     public interface ISignalRService
     {
         Task StartConnect(object? strConnect);
-        Task SendRoom(string? roomName, object? strResult);
+        Task SendMessageToRoom(string? roomName, object? strResult);
+        Task JoinRoom(string roomName);
+        Task LeaveRoom(string roomName);
     }
 }

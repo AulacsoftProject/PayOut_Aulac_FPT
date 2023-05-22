@@ -13,8 +13,10 @@ namespace PayOut_Aulac_FPT.Core.Entities
         [PrimaryKey]
         public int? VchPmtFoxpayPrkID { get; set; }
         public int? patient_id { get; set; }
+        public string? terminal_id { get; set; }
         public string? vch_id { get; set; }
         public string? payment_type { get; set; }
+        public string? id_wallet_bus { get; set; }
         public string? version { get; set; }
         public string? order_id { get; set; }
         public string? transaction_reference { get; set; }

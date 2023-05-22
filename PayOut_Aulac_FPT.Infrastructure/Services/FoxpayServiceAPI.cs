@@ -94,7 +94,7 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
 
         private async Task GetToken(bool isDomainOther = false)
         {
-            var response = await PostRequestAsync("/oauth/get_token", new StringContent("client_credentials"), "grant_type", true, isDomainOther);
+            var response = await PostRequestAsync("/partner-auth/account/get-token", new StringContent("client_credentials"), "grant_type", true, isDomainOther);
             if (response != null)
             {
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -213,6 +213,74 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
                             throw new Exception(data?.error_description);
                         }
                     default: throw new NotificationException("Không thể đối soát giao dịch, vui lòng thử lại!");
+                }
+            }
+            else
+            {
+                throw new NotificationException("Có lỗi xảy ra, vui lòng thử lại!");
+            }
+        }
+
+        public async Task<ConfirmOtpResponse?> ConfirmOTP(ConfirmOtpRequest resultFoxpay)
+        {
+            var result = JsonConvert.SerializeObject(resultFoxpay);
+            var response = await PostRequestAsync("/api/partner-transfer/confirm", result, null);
+            if (response != null)
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.BadRequest:
+                        throw new NotificationException("Dữ liệu không đúng cú pháp!");
+                    case HttpStatusCode.Unauthorized:
+                        throw new NotificationException("Chữ ký không hợp lệ!");
+                    case HttpStatusCode.InternalServerError:
+                        throw new NotificationException("Có lỗi xảy ra trong quá trình xử lý!");
+                    case HttpStatusCode.OK:
+                        var jsonString = await response.Content.ReadAsStringAsync();
+                        var data = JsonConvert.DeserializeObject<ConfirmOtpResponse>(jsonString);
+                        if (data?.error == null)
+                        {
+                            return data;
+                        }
+                        else
+                        {
+                            throw new Exception(data?.error_description);
+                        }
+                    default: throw new NotificationException("Không thể xác nhận giao dịch, vui lòng thử lại!");
+                }
+            }
+            else
+            {
+                throw new NotificationException("Có lỗi xảy ra, vui lòng thử lại!");
+            }
+        }
+
+        public async Task<SoftOtpResponse?> SoftOTP(SoftOtpRequest resultFoxpay)
+        {
+            var result = JsonConvert.SerializeObject(resultFoxpay);
+            var response = await PostRequestAsync("/api/partner-transfer/get-otp", result, null);
+            if (response != null)
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.BadRequest:
+                        throw new NotificationException("Dữ liệu không đúng cú pháp!");
+                    case HttpStatusCode.Unauthorized:
+                        throw new NotificationException("Chữ ký không hợp lệ!");
+                    case HttpStatusCode.InternalServerError:
+                        throw new NotificationException("Có lỗi xảy ra trong quá trình xử lý!");
+                    case HttpStatusCode.OK:
+                        var jsonString = await response.Content.ReadAsStringAsync();
+                        var data = JsonConvert.DeserializeObject<SoftOtpResponse>(jsonString);
+                        if (data?.error == null)
+                        {
+                            return data;
+                        }
+                        else
+                        {
+                            throw new Exception(data?.error_description);
+                        }
+                    default: throw new NotificationException("Không thể lấy mã OTP, vui lòng thử lại!");
                 }
             }
             else

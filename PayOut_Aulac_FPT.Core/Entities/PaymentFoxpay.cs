@@ -116,4 +116,42 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? transaction_type { get; set; }
         public string? signature { get; set; }
     }
+
+    public class ConfirmOtpRequest
+    {
+        public string? patient_id { get; set; }
+        public string? transaction_reference { get; set; }
+        public string? credential { get; set; }
+        public string? signature { get; set; }
+    }
+
+    public class ConfirmOtpResponse
+    {
+        public string? error { get; set; }
+        public string? error_description { get; set; }
+        public string? patient_id { get; set; }
+        public string? transaction_payment { get; set; }
+        public string? transaction_reference { get; set; }
+        public string? transaction_id { get; set; }
+        public string? transaction_status { get; set; }
+        public string? transaction_status_name { get; set; }
+        public string? transaction_timestamp { get; set; }
+        public string? signature { get;set; }
+    }
+
+    public class SoftOtpRequest
+    {
+        public string? transaction_reference { get; set; }
+        public string? signature { get; set; }
+    }
+
+    public class SoftOtpResponse
+    {
+        public string? error { get; set; }
+        public string? error_description { get; set; }
+        public string? transaction_payment { get; set; }
+        public string? transaction_id { get; set; }
+        public string? credential { get; set; }
+        public string? signature { get; set; }
+    }
 }

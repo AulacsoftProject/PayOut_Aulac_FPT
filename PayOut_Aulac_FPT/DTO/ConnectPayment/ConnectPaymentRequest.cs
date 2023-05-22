@@ -20,6 +20,8 @@ namespace PayOut_Aulac_FPT.DTO.ConnectPayment
         [RequiredCustom]
         public int? vch_id { get; set; }
         [RequiredCustom]
+        public string? id_wallet_bus { get; set; }
+        [RequiredCustom]
         public double? amount { get; set; }
         [RequiredCustom]
         public string? currency_id { get; set; }

@@ -153,6 +153,7 @@ app.UseCors(CORS_POLICY);
 app.UseEndpoints(endpoints => {
     endpoints.MapControllers();
     endpoints.MapHub<SignalRService>("/qrcode");
+    //endpoints.MapHub<SignalRService>("/qrcode/46187_P10");
 });
 app.MapControllers();
 

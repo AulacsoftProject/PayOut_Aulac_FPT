@@ -13,5 +13,7 @@ namespace PayOut_Aulac_FPT.Core.Interfaces.Services
         public Task<ResultCheckFoxpay?> CheckTransaction(CheckTransaction resultPayment);
         public Task<ResultCancelFoxpay?> CancelTransaction(CancelTransaction resultPayment);
         public Task<ResultReconcileFoxpay?> ReconcileTransaction(ReconcileTransaction resultFoxpay);
+        public Task<SoftOtpResponse?> SoftOTP(SoftOtpRequest resultFoxpay);
+        public Task<ConfirmOtpResponse?> ConfirmOTP(ConfirmOtpRequest resultFoxpay);
     }
 }

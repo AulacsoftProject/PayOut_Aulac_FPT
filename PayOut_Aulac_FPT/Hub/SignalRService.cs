@@ -3,33 +3,26 @@ using PayOut_Aulac_FPT.DTO.ConnectPayment;
 
 namespace PayOut_Aulac_FPT.Hub
 {
-    public class SignalRService : Hub<ISignalRService>
+    public class SignalRService : Microsoft.AspNetCore.SignalR.Hub
     {
-        public async Task StartConnect(object? strConnect)
+        //public async Task StartConnect(object? strConnect)
+        //{
+        //    await Clients.All.SendAsync(strConnect);
+        //}
+
+        public async Task JoinRoom(string roomName)
         {
-            await Clients.All.StartConnect(strConnect);
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
         }
 
-        public async Task SendRoom(string roomName, object? strResult)
+        public async Task LeaveRoom(string roomName)
         {
-            await Clients.Group(roomName).SendRoom(roomName, strResult);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
         }
 
-        //public async Task JoinRoom(string roomName, ResultInfo? strResult)
-        //{
-        //    await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
-        //    await Clients.Group(roomName).SendRoom(roomName, strResult);
-        //}
-
-        //public async Task LeaveRoom(string roomName)
-        //{
-        //    await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
-        //    await Clients.Group(roomName).SendAsync("LeaveRoom", $"{Context.ConnectionId} has left the room {roomName}.");
-        //}
-
-        //public async Task SendMessage(string roomName, string message)
-        //{
-        //    await Clients.Group(roomName).SendAsync("ReceiveMessage", $"{Context.ConnectionId}: {message}");
-        //}
+        public async Task SendMessageToRoom(string roomName, object? strResult)
+        {
+            await Clients.Group(roomName).SendAsync("ReceiveMessage", strResult);
+        }
     }
 }
