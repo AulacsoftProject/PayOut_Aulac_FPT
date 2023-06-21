@@ -16,5 +16,10 @@ namespace PayOut_Aulac_FPT.Core.Services
         {
             _repo = repo;
         }
+
+        public QRCode? Get_QRCode(QRCode entity)
+        {
+            return _repo.Get_QRCode(entity);
+        }
     }
 }

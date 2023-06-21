@@ -50,7 +50,9 @@ namespace PayOut_Aulac_FPT.Core.Entities
         public string? InsNum { get; set; }
         [TableForeign("VchPaymentFoxpay", "VchPmtFoxpayPrkID")]
         public int? VchPmtFoxpayPrkID { get; set; }
-        [TableForeign("VchPaymentFoxpay", "StatusReq")]
+        [TableForeign("VchPaymentHeader", "StatusReq")]
         public string? StatusReq { get; set; }
+        [TableForeign("Sys_Option", "FoxpayPaymentTimeout")]
+        public int? SecondsTimeout { get; set; }
     }
 }

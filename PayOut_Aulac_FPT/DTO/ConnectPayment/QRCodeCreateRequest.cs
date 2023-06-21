@@ -4,6 +4,6 @@
     {
         public int? MdcFilePrkID { get; set; }
         public int? VchPmntPrkID { get; set; }
-        public string? HspInsCode { get; set; }
+        public string? terminal_id { get; set; }
     }
 }

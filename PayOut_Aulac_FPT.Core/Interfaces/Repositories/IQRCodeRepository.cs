@@ -9,5 +9,6 @@ namespace PayOut_Aulac_FPT.Core.Interfaces.Repositories
 {
     public interface IQRCodeRepository:IBaseRepository<QRCode>
     {
+        public QRCode? Get_QRCode(QRCode entity);
     }
 }

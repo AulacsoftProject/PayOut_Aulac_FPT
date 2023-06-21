@@ -48,7 +48,19 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: CORS_POLICY, builder =>
     {
         //builder.WithOrigins("").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithOrigins("http://apphis.hopto.org:1500"); ;
+        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials().WithOrigins("http://apphis.hopto.org:1500", "");
+        //builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
+        //builder.SetIsOriginAllowed(origin => true);
+    });
+});
+
+const string CORS_POLICY2 = "CorsPolicy2";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: CORS_POLICY2, builder =>
+    {
+        //builder.WithOrigins("").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        builder.WithMethods("Get");
         //builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
         //builder.SetIsOriginAllowed(origin => true);
     });
@@ -149,10 +161,12 @@ app.UseAuthorization();
 
 app.UseRouting();
 app.UseCors(CORS_POLICY);
+app.UseCors(CORS_POLICY2);
 
 app.UseEndpoints(endpoints => {
     endpoints.MapControllers();
     endpoints.MapHub<SignalRService>("/qrcode");
+    endpoints.MapHub<SignalRService>("/qrcode/iot");
     //endpoints.MapHub<SignalRService>("/qrcode/46187_P10");
 });
 app.MapControllers();

@@ -15,52 +15,100 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
 {
     public class FoxpayServiceAPI : IFoxpayServiceAPI
     {
+        private bool isDomainNow;
         private static Token? token;
+        private static Token? token2;
         private string? domain;
         private string? domain2;
         private string? username;
         private string? password;
         private string? deviceID;
+        private string? username2;
+        private string? password2;
+        private string? deviceID2;
         private string? ipAddress;
         private string encoded;
+        private string encoded2;
         private readonly IConfiguration _configuration;
         private readonly IBase64Service _base64Service;
         public FoxpayServiceAPI(IConfiguration configuration, IBase64Service base64Service)
         {
             this._configuration = configuration;
             this._base64Service = base64Service;
-            domain = configuration["Foxpay:Domain"];
+            //domain = configuration["Foxpay:Domain"];
             domain2 = configuration["Foxpay:Domain2"];
             username = configuration["Foxpay:Username"];
             password = configuration["Foxpay:Password"];
-            deviceID = configuration["Foxpay:device-id"];
-            ipAddress = configuration["Foxpay:ip-address"];
+            //deviceID = configuration["Foxpay:device-id"];
+            username2 = configuration["Foxpay:Username2"];
+            password2 = configuration["Foxpay:Password2"];
+            deviceID2 = configuration["Foxpay:device-id2"];
+            //ipAddress = configuration["Foxpay:ip-address"];
         }
+
+        public string? Domain(string? pDomain)
+        {
+            if (string.IsNullOrEmpty(domain))
+                domain = pDomain;
+
+            return domain;
+        }
+
+        public string? DeviceID(string? pDeviceID)
+        {
+            if(string.IsNullOrEmpty(deviceID)) 
+                deviceID = pDeviceID;
+
+            return deviceID;
+        }
+
+        public string? IpAddress(string? pIp)
+        {
+            if (string.IsNullOrEmpty(ipAddress))
+                ipAddress = pIp;
+
+            return ipAddress;
+        }
+
         private async Task<HttpResponseMessage> PostRequestAsync(string path, string paramJson, MultipartFormDataContent dataRaw, bool isLogin = false, bool isDomainOther = false)
         {
-            encoded = _base64Service.Base64Encode(username + ":" + password);
-
             using HttpClient httpClient = new HttpClient();
 
             if (isDomainOther)
+            {
+                encoded2 = _base64Service.Base64Encode(username2 + ":" + password2);
                 httpClient.BaseAddress = new Uri(domain2);
+            }
             else
+            {
+                encoded = _base64Service.Base64Encode(username + ":" + password);
                 httpClient.BaseAddress = new Uri(domain);
+            }
 
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
             var request = new HttpRequestMessage(HttpMethod.Post, path);
-            request.Headers.Add("device-id", deviceID);
+            if (isDomainOther)
+            {
+                request.Headers.Add("device-id", deviceID2);
+                request.Headers.Add("Authorization", "Basic " + encoded2);
+            }
+            else
+            {
+                request.Headers.Add("device-id", deviceID);
+                request.Headers.Add("Authorization", "Basic " + encoded);
+            }
+
             request.Headers.Add("ip-address", ipAddress);
-            request.Headers.Add("Authorization", "Basic " + encoded);
 
             if (!isLogin)
             {
-                if (token == null /*|| !token.IsValid()*/)
+                if (token == null || isDomainNow != isDomainOther)
                 {
-                    await GetToken();
+                    isDomainNow = isDomainOther;
+                    await GetToken(isDomainOther);
                 }
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token?.access_token);
+                request.Headers.Authorization = isDomainOther ? new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token2?.access_token) : new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token?.access_token);
             }
 
             if (paramJson == null)
@@ -137,6 +185,7 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
                         var data = JsonConvert.DeserializeObject<ResultCheckFoxpay>(jsonString);
                         if (data?.result_code != null)
                         {
+                            token = null;
                             return data;
                         }
                         else
@@ -190,7 +239,7 @@ namespace PayOut_Aulac_FPT.Infrastructure.Services
         public async Task<ResultReconcileFoxpay?> ReconcileTransaction(ReconcileTransaction resultFoxpay)
         {
             var result = JsonConvert.SerializeObject(resultFoxpay);
-            var response = await PostRequestAsync("/api/hue-his/payment/reconcile-transaction", result, null, false, true);
+            var response = await PostRequestAsync("/api/v1/reconcile/transactions", result, null);
             if (response != null)
             {
                 switch (response.StatusCode)

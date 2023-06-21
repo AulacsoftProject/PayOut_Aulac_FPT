@@ -13,6 +13,8 @@
         public string? InsNum { get; set; }
         public string? DateExam { get; set; }
         public string? AmtLineInExc { get; set; }
+        public string? AmtLineInExcToString { get; set; }
+        public int? SecondsTimeout { get; set; }
         public QRCodeInfo? QRCode { get; set; }
     }
 
@@ -47,6 +49,7 @@
     {
         public string? result_code { get; set; }
         public string? result { get; set; }
+        public int? StatusReq { get; set; }
         public string? vch_id { get; set; }
         public string? payment_type { get; set; }
         public string? message { get; set; }
